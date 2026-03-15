@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"regexp"
 	"strings"
 	"time"
 
@@ -16,22 +17,27 @@ type Provider struct {
 }
 
 func (p *Provider) AppendRecords(ctx context.Context, zone string, records []libdns.Record) ([]libdns.Record, error) {
-	f, err := os.OpenFile(p.ZoneFilePath, os.O_APPEND|os.O_WRONLY, 0644)
+	// 1. Read the whole file
+	data, err := os.ReadFile(p.ZoneFilePath)
 	if err != nil {
 		return nil, err
 	}
-	defer f.Close()
 
+	// 2. Bump the serial number
+	newContent := bumpSerial(string(data))
+
+	// 3. Append the new TXT records
 	var appended []libdns.Record
 	for _, rec := range records {
-        // Extract the raw Resource Record struct
 		rr := rec.RR() 
-
 		line := fmt.Sprintf("@ 60 IN %s \"%s\"\n", rr.Type, rr.Data)
-		if _, err := f.WriteString(line); err != nil {
-			return appended, err
-		}
+		newContent += line
 		appended = append(appended, rec)
+	}
+
+	// 4. Overwrite the file with the new serial and records
+	if err := os.WriteFile(p.ZoneFilePath, []byte(newContent), 0644); err != nil {
+		return nil, err
 	}
 
 	time.Sleep(3 * time.Second)
@@ -59,7 +65,12 @@ func (p *Provider) DeleteRecords(ctx context.Context, zone string, records []lib
 			newLines = append(newLines, line)
 		}
 	}
-
-	err = os.WriteFile(p.ZoneFilePath, []byte(strings.Join(newLines, "\n")), 0644)
+	newContent := bumpSerial(strings.Join(newLines, "\n"))
+	err = os.WriteFile(p.ZoneFilePath, []byte(newContent), 0644)
 	return records, err
+}
+
+func bumpSerial(content string) string {
+	re := regexp.MustCompile(`(\d+)(\s*;\s*serial)`)
+	return re.ReplaceAllString(content, fmt.Sprintf("%d${2}", time.Now().Unix()))
 }
