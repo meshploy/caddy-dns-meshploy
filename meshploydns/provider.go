@@ -27,7 +27,7 @@ func (p *Provider) AppendRecords(ctx context.Context, zone string, records []lib
         // Extract the raw Resource Record struct
 		rr := rec.RR() 
 
-		line := fmt.Sprintf("%s 60 IN %s \"%s\"\n", rr.Name, rr.Type, rr.Data)
+		line := fmt.Sprintf("@ 60 IN %s \"%s\"\n", rr.Type, rr.Data)
 		if _, err := f.WriteString(line); err != nil {
 			return appended, err
 		}
