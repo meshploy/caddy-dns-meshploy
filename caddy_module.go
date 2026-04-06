@@ -23,7 +23,7 @@ func (ProviderWrapper) CaddyModule() caddy.ModuleInfo {
 
 func (w *ProviderWrapper) Provision(ctx caddy.Context) error {
 	if w.ZoneFilePath == "" {
-		w.ZoneFilePath = "/etc/coredns/zones/_acme-challenge.cs.pnath.com"
+		w.ZoneFilePath = "/etc/coredns/zones/_acme-challenge.example.com"
 	}
 	return nil
 }
